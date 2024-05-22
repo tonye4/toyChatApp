@@ -12,5 +12,9 @@
 + Create struct for clients that has a username field
     + Create username field.
 
+## End of the day 
 
+- MAY 22 
+    + Was able to setup polling, still unsure if it works but the general structure is there. 
+    + Next day: Finish the if statement for handling client recvs. 
 

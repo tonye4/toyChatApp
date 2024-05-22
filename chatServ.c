@@ -41,6 +41,7 @@ int main(void)
 	struct pollfd poll_list[5];
 	int status; 
 	int yes = 1; 
+	char msg[256];
 
 	// clear up some memory for hints 
 	memset(&hints, 0, sizeof hints); 
@@ -126,7 +127,7 @@ int main(void)
 		
 		// going through the array. 
 		for(int i = 0; i < fdCount; i++){
-			// first index is always the listening socket. Check if it's ready to read if it is accept.
+			// first index is always the listening socket. Check if it's ready to read if yes then accept.
 			if(poll_list[i].revents & POLLIN){
 
 				if(poll_list[i].fd == listenerSock) {
@@ -135,18 +136,22 @@ int main(void)
 					if (newSock == -1){
 						perror("Server: accept");
 						exit(1); 
-					}
+					} 
 				} else {
-					// Need to get something down... try making it so that 
+					poll_list[i].fd = newSock;
+					poll_list[i].events = POLLIN; 
+					
+					// make it so that x client is replaced with the username specified by the client. 
+					printf("X client joined"); 
+					}
 				}
+			else {
+				// If we're the client. 
+
 			}
 			
+			}
+
 		}
-
-	}
-
-	
-	
-	
-	
 }
+
