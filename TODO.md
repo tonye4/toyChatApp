@@ -17,4 +17,7 @@
 - MAY 22 
     + Was able to setup polling, still unsure if it works but the general structure is there. 
     + Next day: Finish the if statement for handling client recvs. 
-
+- MAY 23 
+    + Finished the send and recv logic (Beej's networking).
+    + Next day Create struct for clients with username field.
+    + Create client program. 
