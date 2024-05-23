@@ -153,7 +153,7 @@ int main(void)
 					
 						// Need to know which is the sending fd so we can send each message to respective
 						// clients. 
-						int sendFd = poll_list[i].fd;  
+						int selfFd = poll_list[i].fd;  
 
 						// Error handling recv. 
 						if (noBytes <= 0){
@@ -163,20 +163,28 @@ int main(void)
 							} else { perror("recv");}
 						
 						// If there's an error with recv or the client disconnected then we gotta close socket. 
-						close(poll_list[i].fd); 
+						close(poll_list[i].fd);
+
 						} else {
-							// This is if good data comes in. Here is where we can do the partial send logic (later)
-							
+							// This is if good data comes in. Here is where we can do the partial send logic (later).
+							for (int j = 0; j < fdCount; j++){
+								// Goes through the array sending the buffer from recv to each struct that isn't 
+								// itself and the listeningfd.  
+								int everyoneFd = poll_list[j].fd;
+
+								if (everyoneFd != selfFd && everyoneFd != listenerSock){
+									// error handling 
+									if(send(everyoneFd, msg, noBytes, 0) != -1){
+										perror("server: send"); 
+										continue; 
+									}
+								} 
+							}
 						}
 					}
 				}
-			else {
-				// If we're the client. 
-
 			}
-			
-			}
-
 		}
+	return 0; 
 }
 
