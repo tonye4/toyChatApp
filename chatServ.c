@@ -18,6 +18,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <unistd.h>
 
 #define PORT "3490"
 #define BACKLOG 10
@@ -89,7 +90,14 @@ int main(void)
 	freeaddrinfo(results); // finished binding and creation of sockets.
 	
 	int flags = fcntl(listenerSock, F_GETFL, 0);
-	fcntl(listenerSock, flags | O_NONBLOCK); 
+		if(flags == -1){
+			perror("Server: fcntl1");
+			exit(1);
+		}
+	if(fcntl(listenerSock, flags | O_NONBLOCK) == -1){
+		perror("Server: fcntl2");
+		exit(1); 
+	} 
 
 
 	if (listen(listenerSock, BACKLOG) == -1) {
@@ -99,7 +107,7 @@ int main(void)
 	printf("Server listening .. ");
 
 	// wanna set the first index of poll to be listening socket. 
-	// Do we want it to be alerted for recv??? 
+	// Do we want it to be alerted for recv yes bcos it's gotta be ready to recv data. 
 
 	memset(poll_list, 0, sizeof(poll_list)); 
 	poll_list[0].fd = listenerSock;
@@ -107,17 +115,10 @@ int main(void)
 
 	// count the number of fds in the array. 
 	int fdCount = 1; 
-	// Start loop??? 
 	
+	// Infinite loop that runs poll and checks for existing connections. 
 	while(1) {
-		/*
-		socklen_t socksize = sizeof remoteaddr; 
-		newSock = accept(listenerSock, (struct sockaddr *)&remoteaddr, &socksize);
-		if (newSock == -1){
-			perror("Server: accept");
-			exit(1); 
-		}
-		*/
+
 		int pollCount = poll(poll_list, fdCount, -1); // -1 indefinite blocking.
 
 		if (pollCount == -1){
@@ -125,24 +126,48 @@ int main(void)
 			exit(1);
 		}
 		
-		// going through the array. 
+		// Checking existing connections. First run is only gonna handle the listener fd.  
 		for(int i = 0; i < fdCount; i++){
-			// first index is always the listening socket. Check if it's ready to read if yes then accept.
+			// We only wanna know when the fd's are ready to receive data.
 			if(poll_list[i].revents & POLLIN){
-
+				// Listener socket that accepts new connections each iteration of the inf loop. 
 				if(poll_list[i].fd == listenerSock) {
 					socklen_t socksize = sizeof remoteaddr; 
 					newSock = accept(listenerSock, (struct sockaddr *)&remoteaddr, &socksize);
 					if (newSock == -1){
 						perror("Server: accept");
 						exit(1); 
-					} 
-				} else {
+					}
+					// Adds the new connection the the array.
 					poll_list[i].fd = newSock;
 					poll_list[i].events = POLLIN; 
 					
 					// make it so that x client is replaced with the username specified by the client. 
 					printf("X client joined"); 
+				
+				// If the array is not the listener socket it's an existing array that we wanna recv from.
+				} else {
+						// recv returns no of bytes sent out. Later on we can adjust this so that it can send
+						// the whole string incase there's a partial send.
+						int noBytes = recv(poll_list[i].fd, msg, sizeof(msg), 0);
+					
+						// Need to know which is the sending fd so we can send each message to respective
+						// clients. 
+						int sendFd = poll_list[i].fd;  
+
+						// Error handling recv. 
+						if (noBytes <= 0){
+						// When recv returns 0 for stream socket connection means client shut down.
+							if (noBytes == 0){
+								printf("Client disconnected."); 
+							} else { perror("recv");}
+						
+						// If there's an error with recv or the client disconnected then we gotta close socket. 
+						close(poll_list[i].fd); 
+						} else {
+							// This is if good data comes in. Here is where we can do the partial send logic (later)
+							
+						}
 					}
 				}
 			else {
